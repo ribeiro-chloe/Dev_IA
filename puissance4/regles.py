@@ -213,34 +213,18 @@ def jouer_avec_regles(etat, coup, regles):
     renvoyant un état ; le premier état renvoyé gagne. Les retours non nuls des
     crochets ``victoire`` sont prioritaires sur la victoire standard.
 
-    Au début du tour, les ``debut_tour`` précèdent gravité, victoire, puis les
-    passages applicables. Après placement, les ``apres_coup`` sans crochet
-    ``applicable`` sont exécutés une fois, puis viennent les passages
-    applicables et le contrôle final par gravité et victoire. Un état déjà fini
-    à l'entrée lève ``ValueError("partie finie")``. Si le début de tour produit
-    une victoire, l'état fini est renvoyé sans placement ni ajout du coup, et
-    sans modifier ``tour`` ou ``joueur``.
+    Après le placement, les ``apres_coup`` sans crochet ``applicable`` sont
+    exécutés une fois, puis viennent les passages applicables et le contrôle
+    final par gravité et victoire. Si la partie continue, le coup, le tour et
+    le joueur sont mis à jour, puis les ``debut_tour`` du tour suivant sont
+    appliqués avant gravité, victoire et les passages applicables. Un état déjà
+    fini à l'entrée lève ``ValueError("partie finie")``.
     """
     if etat["fini"]:
         raise ValueError("partie finie")
 
     etat_courant = copier_etat(etat)
-    for regle in regles:
-        crochet = _obtenir_crochet(regle, "debut_tour")
-        if crochet is not None:
-            etat_courant = _appliquer_crochet(etat_courant, crochet)
-
-    etat_courant = gravite(etat_courant)
-    etat_courant, termine = _marquer_fin_si_necessaire(etat_courant, regles)
-    if termine:
-        return etat_courant
-
     limite = etat_courant["lignes"] * etat_courant["colonnes"]
-    etat_courant, _ = _boucle_applicables(
-        etat_courant, coup, regles, limite, arreter_a_victoire=True
-    )
-    if etat_courant["fini"]:
-        return etat_courant
 
     for regle in regles:
         crochet = _obtenir_crochet(regle, "avant_coup")
@@ -288,6 +272,23 @@ def jouer_avec_regles(etat, coup, regles):
     etat_courant["tour"] += 1
     etat_courant["joueur"] = "O" if joueur == "X" else "X"
     etat_courant["fini"] = _resultat_victoire(etat_courant, regles) is not None
+
+    if etat_courant["fini"]:
+        return etat_courant
+
+    for regle in regles:
+        crochet = _obtenir_crochet(regle, "debut_tour")
+        if crochet is not None:
+            etat_courant = _appliquer_crochet(etat_courant, crochet)
+
+    etat_courant = gravite(etat_courant)
+    etat_courant, termine = _marquer_fin_si_necessaire(etat_courant, regles)
+    if termine:
+        return etat_courant
+
+    etat_courant, _ = _boucle_applicables(
+        etat_courant, coup, regles, limite, arreter_a_victoire=True
+    )
     return etat_courant
 
 
@@ -299,4 +300,19 @@ def rejouer_avec_regles(coups, regles):
     return etat
 
 
-REGLES = []
+def _tete_qui_tourne(etat):
+    if etat["tour"] == 1 or etat["tour"] % 4 != 1:
+        return copier_etat(etat)
+
+    nouvel_etat = copier_etat(etat)
+    ancienne_grille = nouvel_etat["grille"]
+    nouvel_etat["grille"] = [list(ligne) for ligne in zip(*ancienne_grille)][::-1]
+    nouvel_etat["colonnes"], nouvel_etat["lignes"] = (
+        nouvel_etat["lignes"],
+        nouvel_etat["colonnes"],
+    )
+    return nouvel_etat
+
+
+REGLE_1 = {"nom": "tete_qui_tourne", "debut_tour": _tete_qui_tourne}
+REGLES = [REGLE_1]

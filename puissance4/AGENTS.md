@@ -97,6 +97,7 @@ Règles de victoire :
 
 ## Interdits
 - Aucune bibliothèque externe.
+-Pas d'import exterieur au projet.
 - Ne jamais modifier l'état reçu : toujours renvoyer un nouvel état.
 - Ne jamais changer une signature du contrat, ni la forme de l'état de base. La structure de l'état reste la même, mais les valeurs `colonnes` et `lignes` peuvent s'inverser.
 - Pas de classe ni d'objet pour représenter l'état ou une règle : dictionnaires et fonctions.
@@ -108,7 +109,7 @@ Règles de victoire :
 - `moteur.py` n'en dépend que dans `rejouer`, qui importe `regles.py` si `regles` n'est pas `None`.
 - Une fonction d'enveloppe (ex. `jouer_avec_regles(etat, coup, regles)`) applique la séquence ci-dessus ; `jouer(etat, colonne)` reste le coup standard.
 - `rejouer(coups, regles=None)` transmet `regles` à cette enveloppe.
-- UNE SEULE fonction de détection de victoire (4 alignés + règle 4 + double victoire = nul) est utilisée à la fois par `jouer` et par `gagnant`. Ne pas dupliquer la logique.
+- UNE SEULE fonction de détection dans regles.py, utilisée par le pipeline. Ne pas dupliquer la logique.
 - La gravité est une fonction unique, réutilisée après chaque rotation ou destruction.
 
 ## Précisions règles

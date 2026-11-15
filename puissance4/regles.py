@@ -370,10 +370,68 @@ def _tetris_apres_coup(etat, coup):
     return nouvel_etat
 
 
+def kamikaze_placement(etat, coup):
+    """Pose un Kamikaze dans une colonne puis détruit sa ligne et sa colonne."""
+    if (
+        not isinstance(coup, tuple)
+        or len(coup) != 2
+        or coup[0] != "K"
+        or not isinstance(coup[1], int)
+        or isinstance(coup[1], bool)
+        or not 0 <= coup[1] < etat["colonnes"]
+    ):
+        raise ValueError("coup illegal")
+
+    nouvel_etat = copier_etat(etat)
+    joueur = etat["joueur"]
+    reserves = nouvel_etat.setdefault(
+        "reserves",
+        {
+            "X": {"fixes": 3, "kamikaze": 1},
+            "O": {"fixes": 3, "kamikaze": 1},
+        },
+    )
+    if reserves[joueur]["kamikaze"] <= 0:
+        raise ValueError("coup illegal")
+
+    colonne = coup[1]
+    ligne = next(
+        (
+            index
+            for index in range(etat["lignes"])
+            if nouvel_etat["grille"][index][colonne] is not None
+        ),
+        etat["lignes"],
+    ) - 1
+    if ligne < 0:
+        raise ValueError("coup illegal")
+
+    nouvel_etat["grille"][ligne][colonne] = joueur
+    reserves[joueur]["kamikaze"] -= 1
+    detruits = nouvel_etat.setdefault("detruits", {"X": 0, "O": 0})
+
+    cases_detruites = {
+        (ligne, index) for index in range(etat["colonnes"])
+    } | {
+        (index, colonne) for index in range(etat["lignes"])
+    }
+    for ligne_case, colonne_case in cases_detruites:
+        jeton = nouvel_etat["grille"][ligne_case][colonne_case]
+        if jeton is None:
+            continue
+        detruits[joueur] += 1
+        if jeton in ("FX", "FO"):
+            reserves[jeton[1]]["fixes"] += 1
+        nouvel_etat["grille"][ligne_case][colonne_case] = None
+
+    return nouvel_etat
+
+
 REGLE_1 = {"nom": "tete_qui_tourne", "debut_tour": _tete_qui_tourne}
 REGLE_2 = {
     "nom": "tetris",
     "applicable": _tetris_applicable,
     "apres_coup": _tetris_apres_coup,
 }
-REGLES = [REGLE_1, REGLE_2]
+REGLE_3 = {"nom": "kamikaze", "placement": kamikaze_placement}
+REGLES = [REGLE_1, REGLE_2, REGLE_3]

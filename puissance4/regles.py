@@ -148,7 +148,9 @@ def _regles_applicables(etat, regles):
     return applicables
 
 
-def _boucle_applicables(etat, coup, regles, limite, arreter_a_victoire):
+def _boucle_applicables(
+    etat, coup, regles, limite, arreter_a_victoire, points_destruction=True
+):
     for _ in range(limite):
         passage_effectue = False
         for regle in regles:
@@ -161,7 +163,14 @@ def _boucle_applicables(etat, coup, regles, limite, arreter_a_victoire):
                 raise TypeError("un crochet applicable doit renvoyer un booléen")
             if resultat:
                 passage_effectue = True
+                avait_detruits = "detruits" in etat
+                detruits_precedents = copier_etat(etat.get("detruits"))
                 etat = _appliquer_crochet(etat, crochet_apres, coup)
+                if not points_destruction:
+                    if avait_detruits:
+                        etat["detruits"] = detruits_precedents
+                    else:
+                        etat.pop("detruits", None)
 
         if not passage_effectue:
             return etat, False
@@ -213,12 +222,12 @@ def jouer_avec_regles(etat, coup, regles):
     renvoyant un état ; le premier état renvoyé gagne. Les retours non nuls des
     crochets ``victoire`` sont prioritaires sur la victoire standard.
 
-    Après le placement, les ``apres_coup`` sans crochet ``applicable`` sont
-    exécutés une fois, puis viennent les passages applicables et le contrôle
-    final par gravité et victoire. Si la partie continue, le coup, le tour et
-    le joueur sont mis à jour, puis les ``debut_tour`` du tour suivant sont
-    appliqués avant gravité, victoire et les passages applicables. Un état déjà
-    fini à l'entrée lève ``ValueError("partie finie")``.
+    Après le placement, la gravité et la victoire sont vérifiées avant les
+    règles applicables. Si la partie continue, le coup, le tour et le joueur
+    sont mis à jour, puis les ``debut_tour`` du tour suivant sont appliqués
+    avant gravité, victoire et les règles applicables. Une ligne détruite après
+    une rotation ne rapporte pas de points de destruction. Un état déjà fini à
+    l'entrée lève ``ValueError("partie finie")``.
     """
     if etat["fini"]:
         raise ValueError("partie finie")
@@ -263,9 +272,14 @@ def jouer_avec_regles(etat, coup, regles):
                     etat_courant, crochet, coup
                 )
 
-    etat_courant, _ = _boucle_applicables(
-        etat_courant, coup, regles, limite, arreter_a_victoire=True
+    etat_courant = gravite(etat_courant)
+    etat_courant, victoire_apres_coup = _marquer_fin_si_necessaire(
+        etat_courant, regles
     )
+    if not victoire_apres_coup:
+        etat_courant, _ = _boucle_applicables(
+            etat_courant, coup, regles, limite, arreter_a_victoire=True
+        )
     etat_courant = gravite(etat_courant)
     joueur = etat["joueur"]
     etat_courant["coups"] = copier_etat(etat["coups"]) + [coup]
@@ -276,10 +290,17 @@ def jouer_avec_regles(etat, coup, regles):
     if etat_courant["fini"]:
         return etat_courant
 
+    rotation_effectuee = False
     for regle in regles:
         crochet = _obtenir_crochet(regle, "debut_tour")
         if crochet is not None:
+            etat_precedent = etat_courant
             etat_courant = _appliquer_crochet(etat_courant, crochet)
+            if (
+                regle.get("nom") == "tete_qui_tourne"
+                and etat_courant != etat_precedent
+            ):
+                rotation_effectuee = True
 
     etat_courant = gravite(etat_courant)
     etat_courant, termine = _marquer_fin_si_necessaire(etat_courant, regles)
@@ -287,7 +308,12 @@ def jouer_avec_regles(etat, coup, regles):
         return etat_courant
 
     etat_courant, _ = _boucle_applicables(
-        etat_courant, coup, regles, limite, arreter_a_victoire=True
+        etat_courant,
+        coup,
+        regles,
+        limite,
+        arreter_a_victoire=True,
+        points_destruction=not rotation_effectuee,
     )
     return etat_courant
 
@@ -314,5 +340,40 @@ def _tete_qui_tourne(etat):
     return nouvel_etat
 
 
+def _lignes_pleines(etat):
+    return [
+        index
+        for index, ligne in enumerate(etat["grille"])
+        if all(case is not None for case in ligne)
+    ]
+
+
+def _tetris_applicable(etat):
+    return bool(_lignes_pleines(etat))
+
+
+def _tetris_apres_coup(etat, coup):
+    nouvel_etat = copier_etat(etat)
+    lignes_pleines = _lignes_pleines(nouvel_etat)
+    detruits = nouvel_etat.setdefault("detruits", {"X": 0, "O": 0})
+    joueur = nouvel_etat["joueur"]
+
+    for index in lignes_pleines:
+        for jeton in nouvel_etat["grille"][index]:
+            detruits[joueur] += 1
+            if jeton in ("FX", "FO"):
+                proprietaire = jeton[1]
+                if "reserves" in nouvel_etat:
+                    nouvel_etat["reserves"][proprietaire]["fixes"] += 1
+        nouvel_etat["grille"][index] = [None] * nouvel_etat["colonnes"]
+
+    return nouvel_etat
+
+
 REGLE_1 = {"nom": "tete_qui_tourne", "debut_tour": _tete_qui_tourne}
-REGLES = [REGLE_1]
+REGLE_2 = {
+    "nom": "tetris",
+    "applicable": _tetris_applicable,
+    "apres_coup": _tetris_apres_coup,
+}
+REGLES = [REGLE_1, REGLE_2]

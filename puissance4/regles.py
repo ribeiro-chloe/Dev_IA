@@ -372,10 +372,10 @@ def _tetris_apres_coup(etat, coup):
 
 def kamikaze_placement(etat, coup):
     """Pose un Kamikaze dans une colonne puis détruit sa ligne et sa colonne."""
+    if not isinstance(coup, tuple) or not coup or coup[0] != "K":
+        return None
     if (
-        not isinstance(coup, tuple)
-        or len(coup) != 2
-        or coup[0] != "K"
+        len(coup) != 2
         or not isinstance(coup[1], int)
         or isinstance(coup[1], bool)
         or not 0 <= coup[1] < etat["colonnes"]
@@ -427,6 +427,52 @@ def kamikaze_placement(etat, coup):
     return nouvel_etat
 
 
+def collectionneur_victoire(etat):
+    """Renvoie le joueur ayant atteint 30 destructions, sans modifier l'état."""
+    detruits = etat.get("detruits", {})
+    for joueur in ("X", "O"):
+        if detruits.get(joueur, 0) >= 30:
+            return joueur
+    return None
+
+
+def inebranlable_placement(etat, coup):
+    """Pose un jeton fixe sur une case vide, avec une ligne comptée depuis le bas."""
+    if not isinstance(coup, tuple) or not coup or coup[0] != "F":
+        return None
+    if (
+        len(coup) != 3
+        or not isinstance(coup[1], int)
+        or isinstance(coup[1], bool)
+        or not isinstance(coup[2], int)
+        or isinstance(coup[2], bool)
+        or not 0 <= coup[1] < etat["lignes"]
+        or not 0 <= coup[2] < etat["colonnes"]
+    ):
+        raise ValueError("coup illegal")
+
+    ligne = etat["lignes"] - 1 - coup[1]
+    colonne = coup[2]
+    if etat["grille"][ligne][colonne] is not None:
+        raise ValueError("coup illegal")
+
+    nouvel_etat = copier_etat(etat)
+    joueur = etat["joueur"]
+    reserves = nouvel_etat.setdefault(
+        "reserves",
+        {
+            "X": {"fixes": 3, "kamikaze": 1},
+            "O": {"fixes": 3, "kamikaze": 1},
+        },
+    )
+    if reserves[joueur]["fixes"] <= 0:
+        raise ValueError("coup illegal")
+
+    nouvel_etat["grille"][ligne][colonne] = "F" + joueur
+    reserves[joueur]["fixes"] -= 1
+    return nouvel_etat
+
+
 REGLE_1 = {"nom": "tete_qui_tourne", "debut_tour": _tete_qui_tourne}
 REGLE_2 = {
     "nom": "tetris",
@@ -434,4 +480,6 @@ REGLE_2 = {
     "apres_coup": _tetris_apres_coup,
 }
 REGLE_3 = {"nom": "kamikaze", "placement": kamikaze_placement}
-REGLES = [REGLE_1, REGLE_2, REGLE_3]
+REGLE_4 = {"nom": "collectionneur", "victoire": collectionneur_victoire}
+REGLE_5 = {"nom": "inebranlable", "placement": inebranlable_placement}
+REGLES = [REGLE_1, REGLE_2, REGLE_3, REGLE_4, REGLE_5]

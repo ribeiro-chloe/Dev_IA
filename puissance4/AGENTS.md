@@ -22,10 +22,17 @@ Forme de l’état(un dictionnaire, rien d’autre):
 } 
 
 ## Mode de jeu
-- `regles=None` : Puissance 4 STANDARD, comportement strictement identique au socle.
-  C'est ce que vérifie `test_socle.py`.
-- `regles=<liste des cinq règles de regles.py>` : jeu avec les règles maison.
-- Une règle à usage limité retient qu'elle a servi dans l'état, jamais ailleurs.
+- Jeu standard : `moteur.jouer` et `moteur.rejouer(coups)`. `rejouer` ignore `regles`.
+- Jeu avec règles : `regles.rejouer_avec_regles(coups, REGLES)` ou, un coup à la fois, `regles.jouer_avec_regles(etat, coup, REGLES)`. Cette dernière joue UN coup à partir de l'état reçu et n'appelle jamais `rejouer`, `jouer` ni `gagnant`.
+- Avec `regles=[]`, `jouer_avec_regles` se comporte comme le jeu standard (les coups spéciaux `("K", …)` et `("F", …)` sont alors refusés par `ValueError`).
+- Résultat d'une partie avec règles : `regles._resultat_victoire(etat, regles)` renvoie `"X"`, `"O"`, `"nul"` ou `None`. `moteur.gagnant(etat)` ignore les règles (voir « Questions ouvertes »).
+  
+## Forme d'un coup (avec règles)
+Le contrat dit que `coups` contient des colonnes. Avec les règles, un coup est :
+- `int` : jeton normal dans la colonne (colonne de l'orientation courante) ;
+- `("K", colonne)` : jeton Kamikaze (règle 3), il tombe dans la colonne comme un jeton normal ;
+- `("F", ligne, colonne)` : jeton fixe (règle 5), posé sur n'importe quelle case VIDE, même en l'air. ATTENTION : pour ce coup, `ligne` 0 = BAS et `colonne` 0 = gauche, dans l'orientation
+  courante du plateau (6 lignes × 7 colonnes, ou 7 × 6 après chaque rotation). L'indice dans `etat["grille"]` (ligne 0 = haut, imposé par le contrat) est `etat["lignes"] - 1 - ligne`. Exemple : `("F", 0, 1)` = bas de la colonne 1.
 
 
 ## Décisions de conception
@@ -39,51 +46,17 @@ Forme de l’état(un dictionnaire, rien d’autre):
 Une règle reçoit un état et renvoie un NOUVEL état. Elle ne modifie jamais l'état reçu. Les règles `avant_coup` et `victoire` ne modifient rien : elles répondent seulement.
 
 2. Ajout clés d'état dans regles.py:
-- "reserves": {"X": {"fixes": 3, "kamikaze": 1}, "O": {...}} — usages restants(règles 3 et 5)
--"detruits": {"X": 0, "O": 0} — jetons détruits par joueur (règles 2,3,4)
-Représentation d'un jeton fixe (règle 5) dans la grille : `"FX"` ou `"FO"`
-(le second caractère est le propriétaire, à qui le jeton est redonné s'il est détruit).
-Ce n'est ni `"X"` ni `"O"` : il n'appartient à aucun joueur pour les alignements.
-Le jeton fixe voyage ainsi avec la case lors des rotations, sans clé supplémentaire.
+- `"reserves"` : `{"X": {"fixes": 3, "kamikaze": 1}, "O": {...}}` — usages restants (règles 3 et 5). Créée au premier coup spécial ; la règle 2 s'en sert pour redonner un jeton fixe détruit.
+- `"detruits"` : `{"X": 0, "O": 0}` — nombre de jetons détruits PENDANT LES TOURS de chaque joueur, quel que soit leur propriétaire (règles 2, 3 ; lue par la règle 4). Créée à la première destruction.
+- Jeton fixe (règle 5) dans la grille : `"FX"` ou `"FO"` (second caractère = propriétaire, à qui le jeton est redonné s'il est détruit). Ce n'est ni `"X"` ni `"O"` : il ne compte dans aucun alignement. Il voyage avec la case lors des rotations, sans clé supplémentaire. Toute nouvelle clé qui contient une liste ou un dictionnaire doit être copiée par `copier_etat`.
+
 3. Forme d’un coup
 Le contrat dit que ‘coups’ contient des colonnes. Avec les règles actives, un coup est :
 ‘int’ : jeton normal dans la colonne(colonne de l’orientation courante)
 ‘(“K”, colonne)’ : jeton Kamikaze(règle 3), posé dans la colonne
 ‘(“F”, ligne, colonne)’ : jeton fixe (règle 5), Avec ‘regles=None’, seuls les ‘int’ sont acceptés.
-4. Ordre : <
-Si tour % 4 == 1 et tour!=1:
-	Règle 1 : Renversement du plateau
-	Application de la gravité
-	Vérification de victoire par 4 à la suite
-	Tant que Règle 2 est applicable:
-		Règle 2 : destruction(ces destructions ne rapportent aucun point)
-		Application de la gravité
-		Vérification de victoire par 4 à la suite
-Choix du jeton
-Si Règle 5 est utilisée : 
-	Règle 5 : placement libre du jeton sur un emplacement vide
-Sinon si Règle 3 est utilisée : 
-	Placement normal de jeton
-	Règle 3 : destruction
-	Règle 4 : ajout des points
-	Règle 4 : vérification des points
-	Application de la gravité
-Vérification de victoire par 4 à la suite
-Sinon : 
-	Placement normal de jeton
-	Vérification de victoire par 4 à la suite
-Tant que Règle 2 applicable : 
-	Règle 2 : destruction
-	Règle 4 : ajout des points
-	Règle 4 : vérification des points
-	Application de la gravité
-	Vérification de victoire par 4 à la suite
-Vérification de victoire par 4 à la suite
->.
-Règles de victoire :
-- Double victoire de 4 alignés (les deux joueurs en même temps) : match nul.
-- **Règle 4 prioritaire** : un joueur qui atteint 30 jetons détruits ou plus gagne, même si l'adversaire aligne 4 au même moment.
-5. Interactions :
+
+4. Interactions :
 | Règles | Situation | Ce qui se passe |
 | 1 et 2 | déclenchées au même tour | Règle 1 puis règle 2|
 | 1 et 5 | lors de la règle 1 | Le plateau tourne à 90°, les jetons fixes  suivent le plateau et restent inaffectés par la gravité. |
@@ -93,7 +66,24 @@ Règles de victoire :
 | 3 et 5 | déclenchement règle 3 | Quand un jeton fixe se trouve sur une ligne ou colonne supprimée par la règle 3, le jeton est détruit et redonné au joueur. |
 
 
-6. Usage limité : Règle 3: 1 jeton Kamikaze par joueur. Règle 5: 3 jetons fixes par joueur. Le compteur est dans `etat["reserves"]`, donc rejouer la même suite de coups redonne exactement le même résultat.
+5. Usage limité : Règle 3: 1 jeton Kamikaze par joueur. Règle 5: 3 jetons fixes par joueur. Le compteur est dans `etat["reserves"]`, donc rejouer la même suite de coups redonne exactement le même résultat.
+
+## Ordre d'application implémenté (le règlement fait foi ; en cas de divergence, le code change)
+`jouer_avec_regles(etat, coup, regles)` :
+0. Si `etat["fini"]` : `ValueError("partie finie")`.
+1. `avant_coup` de chaque règle ; un seul `False` lève `ValueError("coup interdit")`.
+2. Placement : `int` → jeton normal ; sinon crochets `placement` (règle 3 : Kamikaze, qui pose le jeton PUIS détruit sa ligne et sa colonne ; règle 5 : jeton fixe).
+3. `apres_coup` des règles sans `applicable` (aucune pour l'instant).
+4. Gravité, puis vérification de victoire. Si la partie est finie, la boucle suivante n'a pas lieu : la victoire est prioritaire, une ligne pleine n'est donc pas détruite.
+5. Boucle « règle 2 » : tant qu'une règle `applicable` l'est (garde-fou : lignes × colonnes passages, sinon `RuntimeError`) : son `apres_coup` (destruction de TOUTES les lignes pleines d'un coup, points comptés), gravité, vérification de victoire (arrêt si la partie est finie).
+6. Mise à jour de `coups`, `tour` (+1), `joueur` ; `fini` = résultat de victoire non `None`.
+7. Si la partie continue : début du tour du joueur suivant. Crochets `debut_tour` (règle 1 : rotation si le nouveau `tour % 4 == 1` et `tour != 1`), gravité, victoire, puis la même boucle qu'en 5., SANS POINT si une rotation vient d'avoir lieu. Conséquence : l'état renvoyé après le coup 4, 8, 12… est déjà tourné ; `coups_possibles` porte sur la grille tournée.
+
+## Règles de victoire
+- Le résultat est donné par `_resultat_victoire(etat, regles)` : les crochets `victoire` d'abord (le premier résultat non `None` l'emporte), sinon la détection standard `victoire(etat)`.
+- Détection standard : 4 alignés de `"X"` ou `"O"` (les jetons fixes ne comptent pas) ;les deux joueurs alignés en même temps : `"nul"` ; grille pleine sans alignement : `"nul"`.
+- Règle 4 prioritaire : le joueur qui atteint 30 jetons détruits gagne, même si l'adversaire aligne 4 au même moment.
+- Tous les jetons détruits pendant un tour comptent pour le joueur qui vient de jouer. Un seul joueur marque donc par tour.
 
 ## Interdits
 - Aucune bibliothèque externe.

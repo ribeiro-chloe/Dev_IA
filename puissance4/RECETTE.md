@@ -4,7 +4,7 @@ X joue en premier
 |----|-------|-------------|---------|---------|-----|----------|
 | 1  | base + R1 | [3,3,4,4,5,4,5] | X gagne en jouant 5 | |  | 13/11/2026 |
 | 2 | R1 + R2 | [0,0,0,0,0,1] | la ligne du bas est détruite |  | ✓ | 15/11/2026|
-| 3 |R1 + R2 + R4| [0,0,0,0,0,1,0,1,6,6,6,5,4,0,3,2,6,5,5,5,2,0,1,0,0,0,0,0,0,1] | X gagne en détruisant 30 jetons | | | 13/11/2026 |
+| 3 |R1 + R2 + R4| [0,0,0,0,0,1,0,1,6,6,6,5,3,0,2,4,6,5,5,5,2,0,1,0,0,0,0,0,0,1] | X gagne en détruisant 30 jetons | | | 13/11/2026 |
 | 4  | R3  | [1,1,2,(“K”,2)] | Le joueur O joue un jeton kamikaze en 2 et les jetons de la ligne 1 et de la colonne 2 sont détruits  | |  | 15/11/2026 |
 | 5 | base + R1 | [0,0,1,1,5,5,5,4] | Le plateau tourne de 90° dans le sens anti-horaire et aligne 4 jetons du joueur O  | | ✓ | 14/11/2026 |
 | 6 | base + R1 | [6,5,5,6,5,4,3,3,5,6,5,6]| Le plateau tourne de 90° et fait gagner les deux joueurs résultant d’une égalité  | | ✓ | 13/11/2026 |

@@ -9,8 +9,8 @@ Puissance 4 standard, grille 7 × 6. Les règles ci-dessous s'y ajoutent.
 **Énoncé :**   Tous les 4 coups, le plateau se tourne de 90° dans le sens anti-horaire.
 **Déclenchement :** Tous les 4 coups. Au début du tour du joueur suivant.
 **Cas limite :** 
--Si un joueur aligne 4 jetons de sa couleur avec la gravité il remporte le partie
-      - Si 2 joueurs gagnent en même temps il y a match nul
+	- Si un joueur aligne 4 jetons de sa couleur avec la gravité il remporte le partie
+    - Si 2 joueurs gagnent en même temps il y a match nul
 **Interagit avec :** règle n°2, règle n°5
 
 ## Règle 2 — <Tetris>
@@ -57,8 +57,8 @@ Puissance 4 standard, grille 7 × 6. Les règles ci-dessous s'y ajoutent.
 | 3 et 5 | déclenchement règle 3 | Quand un jeton fixe se trouve sur une ligne ou colonne supprimée par la règle 3, le jeton est détruit et redonné au joueur. |
 
 ## Ordre d'application général
-<
-Si tour modulo 4 == 0 et tour!=0:
+
+Si tour % 4 == 0 et tour!=0:
 	Règle 1 : Rotation du plateau
 	Application de la gravité
 	Vérification de victoire par 4 à la suite

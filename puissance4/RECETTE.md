@@ -15,7 +15,7 @@ X joue en premier
 | 11  |  R1 + R5  | [4,4,4,(2;1)] |Après rotation du plateau le jeton situé en (4;4) tombe sur le jeton fixe en (4;2)| | ✓ | 14/11/2026 |
 | 12  |  R1 + R2 + R4  | [0,0,0,0,0,1] |Le joueur O détruit la ligne du bas en jouant en 1 et gagne 6 points pour la règle 4| | ✓ | 14/11/2026 |
 | 13  |  R3 + R4  | [0,0,0,(“K”,0)] |Le joueur O détruit les jetons de la colonne 1 en jouant son jeton kamikaze en 0 et gagne 4 points pour la règle 4| | ✓ | 14/11/2026 |
-| 14  | base + R2 + R5 | [5,5,6,6,5,4,4,5,1,2,2,1,(“F”,2,3),(“F”,2,2),(“F”,2,1),(“F”,2,0)] |Le joueur O détruit la ligne 2 en jouant un jeton fixe en (0;2) créant une situation de double victoire par alignements verticaux en 4 et 5 résultant d’un match nul| | ✗ | 14/11/2026 |
+| 14  | base + R2 + R5 | [5,5,6,6,5,4,4,5,1,2,2,1,(“F”,2,3),(“F”,2,2),(“F”,2,1),(“F”,2,0)] |Le joueur O détruit la ligne 2 en jouant un jeton fixe en (0;2) créant une situation de double victoire par alignements verticaux en 4 et 5 résultant d’un match nul| | ✓ | 14/11/2026 |
 | 15  |  base + R1 | [0,0,1,1,5,4,3,2,3,6,5] |Le joueur X gagne par alignement d’une diagonale en jouant un jeton en 5| | ✓ | 14/11/2026 |
 | 16  |  base + R1 + R2  | [0,6,1,5,4,5,4,4,0,1] |Le joueur O gagne en jouant en 1 par alignement avant l’application de la règle 2| | ✓ | 14/11/2026 |
 | 17  |  R1 + R2 + R4  | [0,1,2,3,5,5,5,4] |Après rotation du plateau une ligne se forme et est détruite ne rapportant aucun point aux joueurs| | ✓ | 14/11/2026 |
